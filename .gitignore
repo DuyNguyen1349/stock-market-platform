@@ -1,0 +1,54 @@
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Python caching and environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js build output
+.next/
+out/
+build/
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# App Caches / Data Engine cache
+data_engine/cache/
+*.json.log
+*.json.bak
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov

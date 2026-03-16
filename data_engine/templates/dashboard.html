@@ -1,0 +1,559 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Sentiment Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+  :root{
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --bg:#F5F6FA; --card:#fff; --text:#111827; --muted:#6b7280;
+    --border:#e5e7eb; --brand:#2563eb; --brand-hover:#1d4ed8;
+    --pos:#22c55e; --neg:#ef4444; --neu:#6b7280;
+    --radius:16px; --shadow:0 4px 16px rgba(0,0,0,.05); --shadow-lg:0 10px 40px rgba(0,0,0,.08);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#0f172a; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8;
+      --border:#334155; --brand:#60a5fa; --brand-hover:#3b82f6;
+      --pos:#4ade80; --neg:#f87171; --neu:#94a3b8;
+      --shadow:0 4px 16px rgba(0,0,0,.4); --shadow-lg:0 10px 40px rgba(0,0,0,.6);
+    }
+  }
+  {% if theme == 'dark' %}
+  :root{
+      --bg:#0f172a; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8;
+      --border:#334155; --brand:#60a5fa; --brand-hover:#3b82f6;
+      --pos:#4ade80; --neg:#f87171; --neu:#94a3b8;
+      --shadow:0 4px 16px rgba(0,0,0,.4); --shadow-lg:0 10px 40px rgba(0,0,0,.6);
+  }
+  {% endif %}
+
+  /* ============ BASE ============ */
+  body{
+    font-family:var(--font);
+    background:{% if iframe_mode %}transparent{% else %}var(--bg){% endif %};
+    color:var(--text);
+    margin:{% if iframe_mode %}0{% else %}32px{% endif %};
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  h1{font-size:30px;font-weight:800;margin-bottom:20px;}
+  h3{font-size:16px;font-weight:700;margin:0}
+
+  /* ============ FORM ============ */
+  form{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  label{font-weight:600;color:var(--muted);}
+  input,button,select{
+    font:inherit;border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;line-height:1.2;background:var(--card);color:var(--text);
+    transition:all .15s ease;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+  button{
+    background:var(--brand);color:#fff;font-weight:600;cursor:pointer;border:none;
+  }
+  button:hover{background:var(--brand-hover);}
+  button:active{transform:translateY(1px);}
+
+  /* ============ CARD LAYOUT ============ */
+  .row{display:flex;flex-wrap:wrap;gap:24px;margin-top:20px;}
+  .card{
+    flex:1;min-width:380px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);
+    transition:transform .18s,box-shadow .18s,border-color .18s;
+    overflow:visible;              /* ✅ không cắt modebar/title nữa */
+  }
+
+  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+  .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;}
+  .chart-img{ max-width:100%; height:auto; display:block; margin:auto; image-rendering:auto; }
+
+
+  /* ============ EXPAND BTN ============ */
+  .expand{
+    display:inline-flex;align-items:center;gap:6px;padding:6px 10px;
+    border:1px solid var(--border);border-radius:8px;background:var(--card);
+    color:var(--text);font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);
+    transition:all .15s ease;
+  }
+  .expand::after{content:"⛶";opacity:.8;}
+  .expand:hover{background:color-mix(in srgb,var(--card) 85%,var(--bg) 15%);}
+
+  /* ============ HEADLINES ============ */
+  .headlines-scroll{
+    max-height:460px;overflow-y:auto;padding:14px;border:1px dashed var(--border);
+    border-radius:10px;background:color-mix(in srgb,var(--card) 95%,var(--bg) 5%);
+  }
+  ol.headlines{margin:8px 0 0;padding:0;list-style-position:inside;}
+  ol.headlines li{margin:12px 0;font-size:15px;}
+  .time{font-size:13px;font-weight:700;color:var(--muted);margin-right:8px;}
+  .hlink{color:inherit;text-decoration:none;}
+  .hlink:hover{color:var(--brand);text-decoration:underline;}
+
+  /* ============ BADGES ============ */
+  .badge{font-size:12px;padding:2px 8px;border-radius:999px;margin-left:6px;font-weight:700;}
+  .badge.pos{background:rgba(34,197,94,.15);color:var(--pos);}
+  .badge.neg{background:rgba(239,68,68,.15);color:var(--neg);}
+  .badge.neu{background:rgba(148,163,184,.15);color:var(--neu);}
+
+    /* ============ LABELS (section + card) ============ */
+  .label-rail{
+    position:relative; text-align:center;
+    margin: 6px 0 12px;
+  }
+  .label-rail::before{
+    content:""; position:absolute; left:0; right:0; top:50%;
+    height:1px; background: var(--border);
+  }
+  .label-pill{
+    position:relative; display:inline-block;
+    padding:6px 16px; border-radius:999px; font-weight:700;
+    line-height:1; color:#fff;            /* chữ trắng cho dễ đọc */
+    background: var(--label-bg, var(--brand));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+  }
+  /* === Rail + pill centered + Expand at right (same line) === */
+  .header-rail-pill{
+    position: relative;
+    margin: 6px 0 12px;
+    padding: 8px 4px 0;
+  }
+  .header-rail-pill::before{
+    content:"";
+    position:absolute; left:0; right:0; top:50%;
+    height:1px; background: var(--border);
+  }
+
+  /* pill luôn đúng giữa, nằm trên rail */
+  .header-rail-pill .pill{
+    position:absolute; left:50%; top:50%;
+    transform: translate(-50%, -50%);
+    padding:6px 16px; border-radius:999px;
+    font-weight:700; font-size:14px; line-height:1;
+    color:#fff; background: var(--label-bg) !important; /* KHÔNG fallback về --brand */
+    z-index:1; box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+  }
+
+  /* Expand cùng hàng, ở góc phải */
+  .header-rail-pill .expand{
+    position:absolute; right:8px; top:50%;
+    transform: translateY(-50%);
+    padding:4px 10px; font-size:12px;
+    border:none; border-radius:8px;
+    background: var(--border); color: var(--text);
+    cursor:pointer; transition: all .2s;
+  }
+  .header-rail-pill .expand:hover{ background: var(--brand); color:#fff; }
+
+  /* Màu theo data-color (phòng khi bạn không set --label-bg bằng inline style) */
+  .header-rail-pill[data-color="positive"] .pill{ background:#6ECB63 !important; }
+  .header-rail-pill[data-color="neutral"]  .pill{ background:#F8B400 !important; }
+  .header-rail-pill[data-color="negative"] .pill{ background:#EB5353 !important; }
+
+
+  /* tiện dụng: chọn màu bằng data-color */
+  .label-rail[data-color="positive"] .label-pill{ background:#6ECB63; }  /* positive */
+  .label-rail[data-color="neutral"]  .label-pill{ background:#F8B400; }  /* neutral */
+  .label-rail[data-color="negative"] .label-pill{ background:#EB5353; }  /* negative */
+
+  /* Kiểu #2: chip nhỏ trong tiêu đề */
+  .title-chip{
+    display:inline-block; margin-right:8px; padding:4px 10px;
+    border-radius:999px; font-weight:700; font-size:12px; color:#fff;
+    background: var(--chip-bg, var(--brand));
+    vertical-align:middle;
+  }
+  .title-chip[data-color="positive"]{ background:#6ECB63; }
+  .title-chip[data-color="neutral"] { background:#F8B400; }
+  .title-chip[data-color="negative"]{ background:#EB5353; }
+
+  /* ============ PLOTLY FIT ============ */
+  /* Đảm bảo biểu đồ chiếm full bề ngang, và cao theo container */
+  .chart-box{
+    position: relative;
+    height: 520px;          /* bạn đổi 460–560 tùy card */
+    width: 100%;
+    overflow: hidden;       /* ✅ chart không thể tràn khỏi card */
+    display: block;
+  }
+
+  .chart-box .plot-container,
+  .chart-box .js-plotly-plot,
+  .chart-box .plotly,
+  .chart-box .plotly-graph-div{
+    position: absolute !important;
+    inset: 0 !important;    /* top:0; right:0; bottom:0; left:0 */
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+  }
+
+/* modebar hiển thị gọn trong khung */
+  .chart-box .modebar{ 
+    opacity: 0; 
+    transition: opacity .15s; 
+    top: 6px !important; 
+    right: 6px !important;
+  }
+  .card:hover .modebar{ opacity: 1; }
+
+  /* giữ card gọn: KHÔNG cần overflow:visible ở .card nữa */
+  .card{
+    overflow: hidden; /* ✅ để không tràn ra ngoài card */
+  }
+  /* ============ FULLSCREEN MODAL ============ */
+  .fs-backdrop{
+    position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;
+    align-items:center;justify-content:center;z-index:9999;
+  }
+  .fs-content{
+    width:96vw;height:90vh;background:var(--card);
+    border-radius:var(--radius);border:1px solid var(--border);
+    box-shadow:0 12px 50px rgba(0,0,0,.35);
+    padding:12px;display:flex;flex-direction:column;overflow:hidden;
+  }
+  .fs-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .fs-close{
+    border:none;background:var(--text);color:var(--card);
+    padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer;
+  }
+    /* fullscreen xem ảnh cũng mượt */
+  #fs-holder img{ max-width:96vw; max-height:84vh; width:auto; height:auto; display:block; margin:auto; }
+  #fs-holder{flex:1;width:100%;height:100%;overflow:hidden;}
+  #fs-plot{width:100%;height:100%;}
+
+  /* scrollbar */
+  .headlines-scroll::-webkit-scrollbar{width:10px;}
+  .headlines-scroll::-webkit-scrollbar-thumb{background:#d6dae1;border-radius:8px;}
+  @media(prefers-color-scheme:dark){
+    .headlines-scroll::-webkit-scrollbar-thumb{background:#334155;}
+  }
+  </style>
+
+  <!-- Plotly (một lần duy nhất) -->
+  <script src ="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <!-- Fullscreen Modal -->
+  <div id="fs-modal" class="fs-backdrop" role="dialog" aria-modal="true">
+    <div class="fs-content">
+      <div class="fs-top">
+        <strong>Fullscreen Chart</strong>
+        <button class="fs-close">Close ✕</button>
+      </div>
+      <div id="fs-holder">
+        <div id="fs-plot" style="width:100%;height:100%"></div>
+        <div id="fs-fallback" style="display:none;width:100%;height:100%;overflow:auto"></div>
+      </div>
+    </div>
+  </div>
+</head>
+<body>
+<!-- === HEADER (Teal Lime Palette, same row layout) === -->
+{% if not iframe_mode %}
+<div style="
+  background:linear-gradient(90deg,#0D3B66 0%,#146B66 25%,#1E8766 50%,#49A86A 75%,#A3DF96 100%);
+  border-radius:14px;
+  padding:18px 22px;
+  margin-bottom:18px;
+  box-shadow:0 4px 20px rgba(0,0,0,.15);
+  color:#fff;
+">
+  <!-- Hàng trên: Title + Form cùng dòng -->
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+
+    <!-- Tiêu đề -->
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <div style="font-size:26px; font-weight:900; letter-spacing:.5px;">
+        <span style="color:#EAF8F0;">SENTIMENT</span>
+        <span style="color:#A3DF96;"> ANALYSIS</span>
+      </div>
+      <div style="font-size:15px; font-weight:500; opacity:.9;">Financial News Intelligence Dashboard</div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" action="/" style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+      <label style="font-weight:700; color:#EAF8F0;">Ticker</label>
+      <input name="ticker" value="{{ ticker or 'AAPL' }}" placeholder="AAPL"
+             style="padding:8px 10px; border-radius:8px; border:none; background:rgba(255,255,255,0.2); color:#fff; width:80px;"/>
+      <label style="font-weight:700; color:#EAF8F0;">Start</label>
+      <input type="date" name="start" value="{{ start }}"
+             style="padding:8px 10px; border-radius:8px; border:none; background:rgba(255,255,255,0.2); color:#fff;"/>
+      <label style="font-weight:700; color:#EAF8F0;">End</label>
+      <input type="date" name="end" value="{{ end }}"
+             style="padding:8px 10px; border-radius:8px; border:none; background:rgba(255,255,255,0.2); color:#fff;"/>
+      <button type="submit"
+        style="
+          padding:8px 16px;
+          border:none;
+          border-radius:10px;
+          font-weight:800;
+          font-size:15px;
+          color:#0D3B66;
+          background:linear-gradient(135deg,#A3DF96,#68C27A);
+          box-shadow:0 2px 4px rgba(0,0,0,.15), inset 0 1px 2px rgba(255,255,255,.25);
+          transition:all .2s ease-in-out;
+          cursor:pointer;
+        "
+        onmouseover="this.style.background='linear-gradient(135deg,#B9F0A7,#78D38B)';this.style.transform='translateY(-1px)'"
+        onmouseout="this.style.background='linear-gradient(135deg,#A3DF96,#68C27A)';this.style.transform='translateY(0)'">
+        ▶ Run
+      </button>
+    </form>
+  </div>
+
+  <!-- Hàng dưới: KPI -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+              gap:12px; margin-top:16px;">
+    <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:12px 16px;">
+      <div style="font-weight:600; color:#EAF8F0;">Average Sentiment</div>
+      <div style="font-weight:900; font-size:19px;">{% if avg_compound is defined %}{{ '%.2f'|format(avg_compound) }}{% else %}—{% endif %}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:12px 16px;">
+      <div style="font-weight:600; color:#EAF8F0;">Breadth (pos − neg)</div>
+      <div style="font-weight:900; font-size:19px;">{% if breadth is defined %}{{ '%.1f'|format(breadth) }}%{% else %}—{% endif %}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:12px 16px;">
+      <div style="font-weight:600; color:#EAF8F0;">Headlines Count</div>
+      <div style="font-weight:900; font-size:19px;">{% if headline_count is defined %}{{ headline_count }}{% else %}—{% endif %}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:12px 16px;">
+      <div style="font-weight:600; color:#EAF8F0;">Top Source</div>
+      <div style="font-weight:900; font-size:19px;">{% if top_source is defined %}{{ top_source }}{% else %}—{% endif %}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+<!-- === /HEADER === -->
+
+  <!-- Row 1 -->
+  <div class="row">
+    <!-- Headlines list -->
+    <div class="card" style="flex:1.2;">
+      <div class="header-rail-pill" data-color="neutral">
+        <span class="pill">Headlines News</span>
+      </div>
+
+      {% if headlines %}
+      <div class="headlines-scroll">
+        <ol class="headlines">
+          {% for h in headlines %}
+          <li>
+            <span class="time">{{ h.date }} {{ h.time }}</span>
+            <a href="{{ h.url }}" target="_blank" rel="noopener noreferrer" class="hlink">
+              {{ h.title }}
+            </a>
+            {% if h.compound > 0.05 %}
+              <span class="badge pos">+{{ '%.2f'|format(h.compound) }}</span>
+            {% elif h.compound < -0.05 %}
+              <span class="badge neg">{{ '%.2f'|format(h.compound) }}</span>
+            {% else %}
+              <span class="badge neu">0.00</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% else %}
+        <p>No headlines in selected range.</p>
+      {% endif %}
+    </div>
+
+    <!-- 1) Sentiment per headline -->
+    <div class="card">
+      <!-- Header: rail + pill ở giữa, Expand bên phải -->
+    <div class="header-rail-pill"
+        data-color="neutral"
+        style="--label-bg: {{ (COLOR_SCHEME|default({})).get('neutral', '#F8B400') }}">
+      <span class="pill">Sentiment per headline</span>
+      <button class="expand" data-target="#chart1"></button>
+    </div>
+      <div id="chart1" class="chart-box">
+        {% if line_headline %} {{ line_headline | safe }} {% else %}<p>No data</p>{% endif %}
+      </div>
+    </div>
+
+
+
+    <!-- 2) Breadth in a Day -->
+    <div class="card">
+      <!-- Header: rail + pill giữa + Expand cùng hàng -->
+      <div class="header-rail-pill" data-color="neutral">
+        <span class="pill">Sentiment Breadth</span>
+        <button class="expand" data-target="#chart7"></button>
+      </div>
+      <div id="chart7" class="chart-box">
+        {% if sent_breadth %} {{ sent_breadth | safe }} {% else %}<p>No data</p>{% endif %}
+      </div>
+    </div>
+
+    <!-- 3) Average by Source -->
+    <div class="card">
+      <div class="header-rail-pill" data-color="positive">
+        <span class="pill">Source-weight Sentiment</span>
+        <button class="expand" data-target="#chart3"></button>
+      </div>
+
+      <div id="chart3" class="chart-box">
+        {% if source_avg %} {{ source_avg | safe }} {% else %}<p>No data</p>{% endif %}
+      </div>
+    </div>
+
+    <!-- 4) Distribution -->
+    <div class="card">
+      <div class="header-rail-pill" data-color="positive">
+        <span class="pill">Distribution of Sentiment</span>
+        <button class="expand" data-target="#chart4"></button>
+      </div>
+
+      <div id="chart4" class="chart-box">
+        {% if dist_hist %} {{ dist_hist | safe }} {% else %}<p>No data</p>{% endif %}
+      </div>
+    </div>
+
+    <!-- 5) Pie -->
+    <div class="card">
+      <div class="header-rail-pill" data-color="positive">
+        <span class="pill">Sentiment Composition</span>
+        <button class="expand" data-target="#chart5"></button>
+      </div>
+      <div id="chart5" class="chart-box">
+        {% if pie_sent %} {{ pie_sent | safe }} {% else %}<p>No data</p>{% endif %}
+      </div>
+    </div>
+  </div> <!-- đóng Row 1 -->
+
+  <!-- Row 2 -->
+<!-- 6) Daily Sentiment (Stacked Bar) -->
+  <div class="row">
+    <div class="card">
+      <div class="header-rail-pill" data-color="negative">
+        <span class="pill">Daily Sentiment</span>
+        <button class="expand" data-target="#chart_daily_stacked"></button>
+      </div>
+
+      <div id="chart_daily_stacked" class="chart-box">
+        {% if daily_stacked %} {{ daily_stacked | safe }} {% else %}<p>No data</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3 -->
+<!-- 9) Word Cloud -->
+  <div class="row">
+    <div class="card">
+      <div class="header-rail-pill" data-color="negative">
+        <span class="pill">Word Cloud</span>
+        <button class="expand" data-target="#chart9"></button>
+      </div>
+
+      <div id="chart9" class="chart-box" style="text-align:center;">
+        {% if wordcloud %}
+          <img class="chart-img" src="data:image/png;base64,{{ wordcloud }}" alt="Word Cloud">
+        {% else %}<p>No data</p>{% endif %}
+      </div>
+    </div>
+
+    <!-- 10) Word Frequency -->
+    <div class="card">
+      <div class="header-rail-pill" data-color="negative">
+        <span class="pill">Word Frequency</span>
+        <button class="expand" data-target="#chart10"></button>
+      </div>
+
+      <div id="chart10" class="chart-box">
+        {% if wordcount %} {{ wordcount | safe }} {% else %}<p class="empty">No data</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== JS: Fullscreen Plotly (render lại từ data/layout) ===== -->
+  <script>
+    const fsModal   = document.getElementById('fs-modal');
+    const fsHolder  = document.getElementById('fs-holder');
+    const fsPlotEl  = document.getElementById('fs-plot');
+    const fsFallback= document.getElementById('fs-fallback');
+    const fsClose   = fsModal.querySelector('.fs-close');
+    let resizeFsHandler = null;
+
+    function extractFigureFrom(container){
+      const srcPlot = container.querySelector('.js-plotly-plot');
+      if(!window.Plotly || !srcPlot) return null;
+      const data   = JSON.parse(JSON.stringify(srcPlot.data || []));
+      const layout = JSON.parse(JSON.stringify(srcPlot.layout || {}));
+      const config = Object.assign({}, (srcPlot._context || {}), {responsive:true, displayModeBar:true});
+      return {data, layout, config};
+    }
+
+    function openFull(targetSel){
+      const container = document.querySelector(targetSel);
+      if(!container) return;
+
+      fsModal.style.display = 'flex';
+
+      const fig = extractFigureFrom(container);
+      // Reset 2 vùng
+      fsFallback.style.display = 'none';
+      fsFallback.innerHTML = '';
+      if(window.Plotly){ try{ Plotly.purge(fsPlotEl); }catch(e){} }
+      fsPlotEl.innerHTML = '';
+      fsPlotEl.style.display = 'block';
+
+      if(fig){
+        fig.layout.autosize = true;
+        fig.layout.width  = fsHolder.clientWidth;
+        fig.layout.height = fsHolder.clientHeight;
+
+        window.Plotly.newPlot(fsPlotEl, fig.data, fig.layout, fig.config).then((gd)=>{
+          resizeFsHandler = () => {
+            const w = fsHolder.clientWidth, h = fsHolder.clientHeight;
+            window.Plotly.relayout(gd, {width:w, height:h, autosize:true});
+            window.Plotly.Plots.resize(gd);
+          };
+          window.addEventListener('resize', resizeFsHandler);
+        });
+      } else {
+        // Fallback cho Word Cloud ảnh / HTML khác
+        fsPlotEl.style.display = 'none';
+        fsFallback.style.display = 'block';
+        fsFallback.innerHTML = container.innerHTML; // chỉ gán vào fallback
+      }
+    }
+
+    function closeFull(){
+      fsModal.style.display = 'none';
+      if(resizeFsHandler){ window.removeEventListener('resize', resizeFsHandler); resizeFsHandler=null; }
+      if(window.Plotly){ try{ Plotly.purge(fsPlotEl); }catch(e){} }
+      fsPlotEl.innerHTML = '';
+      fsFallback.innerHTML = '';
+      fsFallback.style.display = 'none';
+      fsPlotEl.style.display = 'block';
+    }
+
+    document.addEventListener('click', (e)=>{
+      const t = e.target;
+      if(t.classList.contains('expand')){ e.preventDefault(); openFull(t.dataset.target); }
+      if(t.classList.contains('fs-close') || t === fsModal){ closeFull(); }
+    });
+
+      // resize các plot trong card khi đổi kích thước cửa sổ
+    window.addEventListener('resize', () => {
+      if (!window.Plotly) return;
+      document.querySelectorAll('.js-plotly-plot')
+        .forEach(p => window.Plotly.Plots.resize(p));
+    });
+
+    // 👉 Force autosize ngay khi trang đã render xong
+    window.addEventListener('load', () => {
+      if (!window.Plotly) return;
+      document.querySelectorAll('.js-plotly-plot').forEach(p => {
+        try {
+          Plotly.relayout(p, { autosize: true });
+          Plotly.Plots.resize(p);
+        } catch (e) {}
+      });
+    });  // <-- dấu đóng bị thiế
+  </script>
+</body>
+</html>

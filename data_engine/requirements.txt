@@ -1,0 +1,49 @@
+# ─── Web Framework ───────────────────────────────────────────────
+Flask==3.0.3
+flask-caching==2.3.0
+
+# ─── HTTP / Scraping ─────────────────────────────────────────────
+requests==2.32.3
+beautifulsoup4==4.12.3
+lxml==5.3.0
+feedparser==6.0.11
+finviz==1.4.6
+
+# ─── Finance Data ────────────────────────────────────────────────
+yfinance==0.2.43
+pandas_datareader==0.10.0
+
+# ─── Data Science ────────────────────────────────────────────────
+pandas
+numpy==1.26.4
+scikit-learn==1.5.2
+joblib==1.4.2
+
+# ─── Visualization ───────────────────────────────────────────────
+matplotlib==3.9.2
+seaborn==0.13.2
+plotly==5.23.0
+wordcloud==1.9.3
+
+# ─── NLP / Sentiment Analysis ────────────────────────────────────
+nltk==3.9.1
+textblob==0.18.0
+
+# ─── Machine Learning / Forecasting ─────────────────────────────
+prophet
+
+# ─── Portfolio Optimization ──────────────────────────────────────
+PyPortfolioOpt
+
+# ─── Big Data - PySpark Pipeline ─────────────────────────────────
+pyspark==3.5.2
+
+# ─── Kafka Streaming (EC2 Broker) ────────────────────────────────
+confluent-kafka==2.4.0
+
+# ─── Utilities ───────────────────────────────────────────────────
+tqdm==4.66.5
+
+# ─── Jupyter (Dev tools) ─────────────────────────────────────────
+jupyterlab==4.2.5
+ipykernel==6.29.5
