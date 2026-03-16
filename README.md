@@ -4,7 +4,7 @@ This is a comprehensive, enterprise-grade Stock Market Tracking and AI Analysis 
 
 The project incorporates **Big Data** processing using **PySpark** and real-time streaming via **Apache Kafka** deployed on AWS EC2.
 
-![Stock Market Dashboard](frontend/public/favicon.ico) *(Replace with actual screenshot link if available)*
+![Stock Market Dashboard](frontend/public/dashboard.png)
 
 ---
 
